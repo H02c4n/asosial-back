@@ -1,3 +1,5 @@
+from urllib import request
+
 from django.contrib.auth import get_user_model
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -7,6 +9,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from core.pagination import StandardPagination
+from notifications.services import notify
+from notifications.services import notify
 from .serializers import (
     CustomTokenObtainPairSerializer,
     RegisterSerializer,
@@ -114,12 +118,22 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def follow(self, request, username=None):
         target = self.get_object()
+
         if target == request.user:
             return Response(
                 {'detail': 'Kendinizi takip edemezsiniz.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        request.user.following.add(target)
+
+        # Zaten takip ediyorsa bildirim gönderme
+        if not request.user.following.filter(pk=target.pk).exists():
+            request.user.following.add(target)
+            notify(
+                recipient=target,
+                actor=request.user,
+                notification_type=Notification.Type.FOLLOW,
+            )
+
         return Response({'detail': f'@{target.username} takip edildi.'})
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])

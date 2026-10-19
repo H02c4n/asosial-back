@@ -1,4 +1,6 @@
+from asyncio.log import logger
 import json
+import logging
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 
@@ -8,24 +10,26 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     Kullanıcıya özel WebSocket bağlantısı.
     Her kullanıcı kendi grubuna katılır: 'user_<id>'
     """
+    
+    logger = logging.getLogger(__name__)
 
     async def connect(self):
-        #print(f"\n>>> [CONSUMER] connect çağrıldı, scope.user={self.scope['user']}\n")
         user = self.scope['user']
+        logger.info(f"[CONSUMER] connect çağrıldı, user={user}")
 
         if user.is_anonymous:
-            #print(">>> [CONSUMER] Kullanıcı ANONİM → close(4001)\n")
+            logger.warning("[CONSUMER] Anonim → close(4001)")
             await self.close(code=4001)
             return
 
         self.group_name = f'user_{user.id}'
-        #print(f">>> [CONSUMER] accept ediliyor, grup={self.group_name}\n")
+        logger.info(f"[CONSUMER] accept ediliyor, grup={self.group_name}")
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
         await self.send(text_data=json.dumps({
-        'type': 'connected',
-        'message': f'Bildirimlere bağlısın, @{user.username}',
+            'type': 'connected',
+            'message': f'Bildirimlere bağlısın, @{user.username}',
         }))
 
     async def disconnect(self, close_code):
