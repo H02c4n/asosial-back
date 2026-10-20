@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from core.pagination import StandardPagination
+from notifications.models import Notification
 from notifications.services import notify
 from notifications.services import notify
 from .serializers import (
