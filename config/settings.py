@@ -1,4 +1,4 @@
-
+import os
 from pathlib import Path
 from datetime import timedelta
 
@@ -70,12 +70,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.environ.get('DB_ENGINE') == 'postgres':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='asosial'),
+            'USER': config('DB_USER', default='asosial'),
+            'PASSWORD': config('DB_PASSWORD', default='asosial'),
+            'HOST': config('DB_HOST', default='127.0.0.1'),
+            'PORT': config('DB_PORT', default='5432'),
+            'CONN_MAX_AGE': 60,
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 
@@ -155,18 +168,18 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# ------------------------------------------------------------------
-# Django Channels
-# ------------------------------------------------------------------
+REDIS_HOST = config('REDIS_HOST', default='127.0.0.1')
+REDIS_PORT = config('REDIS_PORT', default='6379', cast=int)
+
 CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [
                 {
-                    "host": "127.0.0.1",
-                    "port": 6379,
-                    "socket_timeout": 10,  # Zaman aşımını devre dışı bırak
+                    'host': REDIS_HOST,
+                    'port': REDIS_PORT,
+                    'socket_timeout': 30,
                 }
             ],
         },
@@ -200,3 +213,20 @@ LOGGING = {
 
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())
 CORS_ALLOW_CREDENTIALS = True
+
+
+# ------------------------------------------------------------------
+# Kafka
+# ------------------------------------------------------------------
+KAFKA_BOOTSTRAP_SERVERS = config(
+    'KAFKA_BOOTSTRAP_SERVERS',
+    default='127.0.0.1:9092'
+).split(',')
+KAFKA_TOPIC_COMMENTS = 'comment.created'
+
+
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost:3000,http://127.0.0.1:3000',
+    cast=Csv(),
+)
