@@ -21,14 +21,14 @@ def get_producer() -> KafkaProducer:
     return _producer
 
 
-def publish_comment_created(*, comment_id, post_id, post_author_id, actor_id, actor_username, content):
+def publish_comment_created(*, comment_id, post_id, recipient_id, actor_id, actor_username, content):
     """Yorum oluşturulduğunda Kafka'ya event gönderir."""
     producer = get_producer()
     payload = {
         'event': 'comment.created',
         'comment_id': comment_id,
         'post_id': post_id,
-        'post_author_id': post_author_id,
+        'recipient_id': recipient_id,
         'actor_id': actor_id,
         'actor_username': actor_username,
         'content': content,

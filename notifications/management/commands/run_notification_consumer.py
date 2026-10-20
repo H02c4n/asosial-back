@@ -45,7 +45,7 @@ class Command(BaseCommand):
         from comments.models import Comment
 
         User = get_user_model()
-        recipient = User.objects.get(id=data['post_author_id'])
+        recipient = User.objects.get(id=data['recipient_id'])
         actor = User.objects.get(id=data['actor_id'])
         post = Post.objects.get(id=data['post_id'])
         comment = Comment.objects.get(id=data['comment_id'])

@@ -21,7 +21,8 @@ class CommentViewSet(viewsets.ModelViewSet):
         # ?post=5 filtresi — bir postun yorumları
         post_id = self.request.query_params.get('post')
         if post_id:
-            qs = qs.filter(post_id=post_id)
+            # sadece o postun yorumlarını getir (parent__isnull=True)
+            qs = qs.filter(post_id=post_id, parent__isnull=True)
 
         return qs
 

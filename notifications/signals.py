@@ -7,23 +7,30 @@ from .kafka import publish_comment_created
 
 @receiver(post_save, sender=Comment)
 def publish_comment_event(sender, instance: Comment, created, **kwargs):
-    """Yeni yorum → Kafka'ya comment.created event'i gönder."""
+    """Yeni yorum veya yanıt → Kafka'ya event gönder."""
     if not created:
         return
 
-    # Kendi postuna kendi yorumu → event gönderme (gereksiz)
-    if instance.post.author_id == instance.author_id:
+    # Bildirimin kime gideceğini belirle
+    if instance.parent:
+        # Yanıt veriliyorsa, yanıtlanan yorumun sahibine bildir
+        recipient_id = instance.parent.author_id
+    else:
+        # Ana yorumsa, postun sahibine bildir
+        recipient_id = instance.post.author_id
+
+    # Kendi kendine bildirim gönderme
+    if recipient_id == instance.author_id:
         return
 
     publish_comment_created(
         comment_id=instance.id,
         post_id=instance.post_id,
-        post_author_id=instance.post.author_id,
+        recipient_id=recipient_id,          # <-- Güncellendi
         actor_id=instance.author_id,
         actor_username=instance.author.username,
-        content=instance.content[:200],  # büyük payload göndermemek için kırp
+        content=instance.content[:200],
     )
-
 
 
 # from django.db.models.signals import post_save
