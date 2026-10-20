@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from core.pagination import StandardPagination
 from core.permissions import IsOwnerOrReadOnly
 from .models import Post
+from posts.models import Post, Like
+from notifications.kafka import publish_like_created
 from .serializers import PostSerializer
 
 
@@ -45,6 +47,62 @@ class PostViewSet(viewsets.ModelViewSet):
         # SOFT DELETE — fiziksel silme yerine işaretle
         instance.is_deleted = True
         instance.save(update_fields=['is_deleted', 'updated_at'])
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def like(self, request, pk=None):
+        """POST /api/posts/{id}/like/ — beğen"""
+        post = self.get_object()
+
+        if post.author_id == request.user.id:
+            return Response(
+                {'detail': 'Kendi postunuzu beğenemezsiniz.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        like, created = Like.objects.get_or_create(
+            user=request.user,
+            post=post,
+            defaults={'is_deleted': False},
+        )
+
+        if not created and like.is_deleted:
+            # Daha önce beğenmiş, silmiş → tekrar beğen
+            like.is_deleted = False
+            like.save(update_fields=['is_deleted', 'updated_at'])
+        elif not created and not like.is_deleted:
+            # Zaten beğenilmiş
+            return Response(
+                {'detail': 'Bu postu zaten beğendiniz.'},
+                status=status.HTTP_200_OK,
+            )
+
+        # Kafka'ya event gönder
+        publish_like_created(
+            like_id=like.id,
+            post_id=post.id,
+            post_author_id=post.author_id,
+            actor_id=request.user.id,
+            actor_username=request.user.username,
+        )
+
+        return Response({'detail': 'Beğenildi.', 'is_liked': True})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def unlike(self, request, pk=None):
+        """POST /api/posts/{id}/unlike/ — beğeniyi geri al"""
+        post = self.get_object()
+
+        updated = Like.objects.filter(
+            user=request.user, post=post, is_deleted=False
+        ).update(is_deleted=True)
+
+        if not updated:
+            return Response(
+                {'detail': 'Bu postu zaten beğenmemişsiniz.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({'detail': 'Beğeni geri alındı.', 'is_liked': False})
 
     # ----------------------------------------------------------------
     # Özel endpoint: GET /api/posts/my_posts/

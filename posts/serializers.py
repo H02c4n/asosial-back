@@ -15,11 +15,15 @@ class PostSerializer(serializers.ModelSerializer):
     # İlk 3 yorum (preview için)
     recent_comments = serializers.SerializerMethodField()
 
+    like_count = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
+
     class Meta:
         model = Post
         fields = [
             'id', 'author', 'content', 'image',
             'comment_count', 'recent_comments',
+            'like_count', 'is_liked',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'author', 'created_at', 'updated_at']
@@ -32,3 +36,15 @@ class PostSerializer(serializers.ModelSerializer):
         # En son 3 yorum, en yeni önce
         qs = obj.comments.filter(is_deleted=False).order_by('-created_at')[:3]
         return CommentSerializer(qs, many=True).data
+
+    def get_like_count(self, obj):
+        # is_deleted=False olan beğenileri say
+        return obj.likes.filter(is_deleted=False).count()
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.likes.filter(
+            user=request.user, is_deleted=False
+        ).exists()

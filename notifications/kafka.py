@@ -39,3 +39,22 @@ def publish_comment_created(*, comment_id, post_id, post_author_id, actor_id, ac
         logger.info("[Kafka] comment.created gönderildi: %s", comment_id)
     except Exception as e:
         logger.error("[Kafka] Gönderim hatası: %s", e)
+
+
+def publish_like_created(*, like_id, post_id, post_author_id, actor_id, actor_username):
+    """Bir post beğenildiğinde Kafka'ya event gönderir."""
+    producer = get_producer()
+    payload = {
+        'event': 'like.created',
+        'like_id': like_id,
+        'post_id': post_id,
+        'post_author_id': post_author_id,
+        'actor_id': actor_id,
+        'actor_username': actor_username,
+    }
+    future = producer.send(settings.KAFKA_TOPIC_LIKES, value=payload)
+    try:
+        future.get(timeout=5)
+        logger.info("[Kafka] like.created gönderildi: %s", like_id)
+    except Exception as e:
+        logger.error("[Kafka] Like gönderim hatası: %s", e)

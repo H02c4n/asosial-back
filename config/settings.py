@@ -223,6 +223,7 @@ KAFKA_BOOTSTRAP_SERVERS = config(
     default='127.0.0.1:9092'
 ).split(',')
 KAFKA_TOPIC_COMMENTS = 'comment.created'
+KAFKA_TOPIC_LIKES = 'like.created'
 
 
 CSRF_TRUSTED_ORIGINS = config(
