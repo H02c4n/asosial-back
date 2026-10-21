@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import timedelta
 
 from decouple import config, Csv
-
+import cloudinary  
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -124,8 +124,6 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# Statik dosyaların sıkıştırılması ve önbelleğe alınması için
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -145,10 +143,7 @@ if DEBUG:
 
 REST_FRAMEWORK = {
     # Kimlik doğrulama: JWT kullanacağız
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': tuple(_AUTH_CLASSES),
     # Varsayılan izin: Herkes okuyabilir, sadece giriş yapan yazabilir
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
@@ -175,6 +170,7 @@ SIMPLE_JWT = {
 
 REDIS_HOST = config('REDIS_HOST', default='127.0.0.1')
 REDIS_PORT = config('REDIS_PORT', default='6379', cast=int)
+REDIS_PASSWORD = config('REDIS_PASSWORD', default='')
 
 CHANNEL_LAYERS = {
     'default': {
@@ -184,6 +180,8 @@ CHANNEL_LAYERS = {
                 {
                     'host': REDIS_HOST,
                     'port': REDIS_PORT,
+                    'password': REDIS_PASSWORD or None,
+                    'ssl': True if REDIS_PASSWORD else False,
                     'socket_timeout': 30,
                 }
             ],
@@ -245,12 +243,40 @@ CSRF_TRUSTED_ORIGINS = config(
 )
 
 
+# ------------------------------------------------------------------
+# Cloudinary & Storage (Django 4.2+ Uyumlu)
+# ------------------------------------------------------------------
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
     'API_KEY': config('CLOUDINARY_API_KEY', default=''),
     'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
 }
 
-# Eğer Cloudinary bilgileri girilmişse kullan, yoksa local'de default kalsın
+# Cloudinary SDK'yı başlat (Bazı sürümlerde zorunludur)
 if CLOUDINARY_STORAGE['CLOUD_NAME']:
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    cloudinary.config(
+        cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+        api_key=CLOUDINARY_STORAGE['API_KEY'],
+        api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+        secure=True
+    )
+
+    # Django 4.2+ için yeni depolama ayarı
+    STORAGES = {
+        "default": {
+            "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    # Local'de Cloudinary yoksa varsayılan ayarlar
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
