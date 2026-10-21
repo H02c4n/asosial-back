@@ -21,7 +21,8 @@ RUN pip install -r requirements.txt
 
 # Proje kodu
 COPY . .
-RUN python manage.py collectstatic --noinput
+#RUN mkdir -p /app/staticfiles
+#RUN python manage.py collectstatic --noinput
 # Entrypoint executable
 RUN chmod +x /app/entrypoint.sh
 
