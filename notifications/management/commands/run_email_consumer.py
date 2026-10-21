@@ -9,11 +9,24 @@ class Command(BaseCommand):
     help = 'Yorum eventlerinde post sahibine mock email gönderir'
 
     def handle(self, *args, **options):
+        kafka_config = {
+            'bootstrap_servers': settings.KAFKA_BOOTSTRAP_SERVERS,
+            'group_id': 'email-service',
+            'value_deserializer': lambda m: json.loads(m.decode('utf-8')),
+        }
+
+        if settings.KAFKA_USERNAME and settings.KAFKA_PASSWORD:
+            kafka_config.update({
+                'security_protocol': 'SASL_SSL',
+                'sasl_mechanism': 'SCRAM-SHA-256',
+                'sasl_plain_username': settings.KAFKA_USERNAME,
+                'sasl_plain_password': settings.KAFKA_PASSWORD,
+                'ssl_cafile': settings.KAFKA_CA_CERT,
+            })
+
         consumer = KafkaConsumer(
             settings.KAFKA_TOPIC_COMMENTS,
-            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,   # ← DEĞİŞTİ
-            group_id='email-service',
-            value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+            **kafka_config
         )
         self.stdout.write(self.style.SUCCESS('[Email Consumer] Dinleniyor...'))
 

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -121,6 +122,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Statik dosyaların sıkıştırılması ve önbelleğe alınması için
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -225,6 +228,10 @@ KAFKA_BOOTSTRAP_SERVERS = config(
 KAFKA_TOPIC_COMMENTS = 'comment.created'
 KAFKA_TOPIC_LIKES = 'like.created'
 
+# Aiven Bulut Kafka Şifreleri (Local'de boş kalacak)
+KAFKA_USERNAME = config('KAFKA_USERNAME', default='')
+KAFKA_PASSWORD = config('KAFKA_PASSWORD', default='')
+KAFKA_CA_CERT = config('KAFKA_CA_CERT', default='')
 
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',

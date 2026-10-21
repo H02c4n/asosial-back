@@ -16,14 +16,26 @@ class Command(BaseCommand):
     help = 'Kafka eventlerini dinleyip bildirim oluşturur'
 
     def handle(self, *args, **options):
-        # İKİ TOPIC birden dinleniyor
+        kafka_config = {
+            'bootstrap_servers': settings.KAFKA_BOOTSTRAP_SERVERS,
+            'group_id': 'notification-service',
+            'value_deserializer': lambda m: json.loads(m.decode('utf-8')),
+            'auto_offset_reset': 'earliest',
+        }
+        # Bulut (Aiven) Kontrolü
+        if settings.KAFKA_USERNAME and settings.KAFKA_PASSWORD:
+            kafka_config.update({
+                'security_protocol': 'SASL_SSL',
+                'sasl_mechanism': 'SCRAM-SHA-256',
+                'sasl_plain_username': settings.KAFKA_USERNAME,
+                'sasl_plain_password': settings.KAFKA_PASSWORD,
+                'ssl_cafile': settings.KAFKA_CA_CERT,
+            })
+
         consumer = KafkaConsumer(
             settings.KAFKA_TOPIC_COMMENTS,
-            settings.KAFKA_TOPIC_LIKES,     # ← EKLE
-            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-            group_id='notification-service',
-            value_deserializer=lambda m: json.loads(m.decode('utf-8')),
-            auto_offset_reset='earliest',
+            settings.KAFKA_TOPIC_LIKES,
+            **kafka_config
         )
         self.stdout.write(self.style.SUCCESS('[Notification Consumer] Dinleniyor...'))
 

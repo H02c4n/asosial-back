@@ -12,12 +12,24 @@ _producer = None
 def get_producer() -> KafkaProducer:
     global _producer
     if _producer is None:
-        _producer = KafkaProducer(
-            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
-            retries=3,
-            acks='all',
-        )
+        kafka_config = {
+            'bootstrap_servers': settings.KAFKA_BOOTSTRAP_SERVERS,
+            'value_serializer': lambda v: json.dumps(v).encode('utf-8'),
+            'retries': 3,
+            'acks': 'all',
+        }
+
+        # EĞER BULUTTAYSAK (Kullanıcı adı ve şifre doluysa)
+        if settings.KAFKA_USERNAME and settings.KAFKA_PASSWORD:
+            kafka_config.update({
+                'security_protocol': 'SASL_SSL',
+                'sasl_mechanism': 'SCRAM-SHA-256',
+                'sasl_plain_username': settings.KAFKA_USERNAME,
+                'sasl_plain_password': settings.KAFKA_PASSWORD,
+                'ssl_cafile': settings.KAFKA_CA_CERT, # İndirdiğimiz ca.pem dosyası
+            })
+
+        _producer = KafkaProducer(**kafka_config)
     return _producer
 
 
