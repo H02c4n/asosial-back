@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'cloudinary_storage',
+    'cloudinary',
 
     'core',
     'users',
@@ -233,8 +235,22 @@ KAFKA_USERNAME = config('KAFKA_USERNAME', default='')
 KAFKA_PASSWORD = config('KAFKA_PASSWORD', default='')
 KAFKA_CA_CERT = config('KAFKA_CA_CERT', default='')
 
+# Render gibi proxy arkasında çalışırken HTTPS'i tanıması için
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
     default='http://localhost:3000,http://127.0.0.1:3000',
     cast=Csv(),
 )
+
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': config('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': config('CLOUDINARY_API_SECRET', default=''),
+}
+
+# Eğer Cloudinary bilgileri girilmişse kullan, yoksa local'de default kalsın
+if CLOUDINARY_STORAGE['CLOUD_NAME']:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
